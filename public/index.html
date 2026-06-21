@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Virtual Avatar — AI Student</title>
+<style>
+/* ═══════════════════════════════════════════════════
+   DESIGN TOKENS
+═══════════════════════════════════════════════════ */
+:root {
+  --accent:     #6c63ff;
+  --accent-dim: #4a43cc;
+  --success:    #22c55e;
+  --warn:       #f59e0b;
+  --danger:     #ef4444;
+  --radius:     12px;
+  --radius-sm:  7px;
+  --trans:      0.22s ease;
+}
+
+[data-theme="dark"] {
+  --bg:         #0f1117;
+  --bg2:        #181c27;
+  --bg3:        #1e2333;
+  --border:     rgba(255,255,255,0.08);
+  --text:       #e8eaf0;
+  --text-dim:   #7a80a0;
+  --input-bg:   #12151e;
+  --shadow:     rgba(0,0,0,0.5);
+  --badge-bg:   rgba(108,99,255,0.15);
+  --log-bg:     #0b0d12;
+}
+
+[data-theme="light"] {
+  --bg:         #f4f5fb;
+  --bg2:        #ffffff;
+  --bg3:        #eef0f8;
+  --border:     rgba(0,0,0,0.1);
+  --text:       #1a1d2e;
+  --text-dim:   #6b7194;
+  --input-bg:   #f9faff;
+  --shadow:     rgba(0,0,0,0.12);
+  --badge-bg:   rgba(108,99,255,0.12);
+  --log-bg:     #1a1d2e;
+}
+
+/* ── Reset ─────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  transition: background var(--trans), color var(--trans);
+}
+
+/* ── Scrollbar ─────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ═══════════════════════════════════════════════════
+   LAYOUT
+═══════════════════════════════════════════════════ */
+.app { display: flex; height: 100vh; overflow: hidden; }
+
+/* ── Sidebar ───────────────────────────────────── */
+.sidebar {
+  width: 240px;
+  min-width: 240px;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0;
+  transition: background var(--trans), border-color var(--trans);
+}
+
+.logo {
+  padding: 0 20px 22px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+.logo-icon { font-size: 28px; margin-bottom: 4px; }
+.logo-title { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
+.logo-sub   { font-size: 11px; color: var(--text-dim); margin-top: 1px; }
+
+.nav-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 0;
+  transition: background var(--trans), color var(--trans);
+  font-size: 13.5px;
+  color: var(--text-dim);
+  user-select: none;
+}
+.nav-item:hover  { background: var(--bg3); color: var(--text); }
+.nav-item.active { background: var(--badge-bg); color: var(--accent); font-weight: 600; }
+.nav-item .icon  { font-size: 16px; width: 20px; text-align: center; }
+
+.sidebar-bottom { margin-top: auto; padding: 12px 20px; border-top: 1px solid var(--border); }
+
+/* ── Main area ─────────────────────────────────── */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+.topbar {
+  height: 56px;
+  min-height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 28px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+}
+.topbar-title { font-size: 16px; font-weight: 600; }
+.topbar-actions { display: flex; gap: 10px; align-items: center; }
+
+.content { flex: 1; overflow-y: auto; padding: 28px; }
+
+/* ═══════════════════════════════════════════════════
+   COMPONENTS
+═══════════════════════════════════════════════════ */
+
+/* ── Cards ─────────────────────────────────────── */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  margin-bottom: 18px;
+  transition: background var(--trans), border-color var(--trans);
+}
+.card-title {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.card-title .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent);
+  display: inline-block;
+}
+
+/* ── Form elements ─────────────────────────────── */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-grid.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+.form-full { grid-column: 1 / -1; }
+
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group label { font-size: 12px; color: var(--text-dim); font-weight: 500; }
+.form-group input,
+.form-group select,
+.form-group textarea {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 9px 12px;
+  font-size: 13.5px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color var(--trans), background var(--trans);
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: var(--accent);
+  background: var(--bg3);
+}
+.form-group textarea { resize: vertical; min-height: 70px; }
+.form-group input[type="password"] { letter-spacing: 2px; }
+.form-group .hint { font-size: 11px; color: var(--text-dim); }
+
+/* ── Key status badges ─────────────────────────── */
+.key-status { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.badge {
+  font-size: 11px; padding: 2px 8px; border-radius: 20px;
+  font-weight: 600; letter-spacing: 0.3px;
+}
+.badge.green  { background: rgba(34,197,94,0.15);  color: var(--success); }
+.badge.red    { background: rgba(239,68,68,0.15);   color: var(--danger);  }
+.badge.yellow { background: rgba(245,158,11,0.15);  color: var(--warn);    }
+.badge.purple { background: var(--badge-bg);         color: var(--accent);  }
+
+/* ── Buttons ───────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 18px; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  border: none; outline: none;
+  transition: opacity var(--trans), transform var(--trans);
+  user-select: none; white-space: nowrap;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { opacity: 0.9; }
+.btn-secondary {
+  background: var(--bg3); color: var(--text);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover { background: var(--border); }
+.btn-danger { background: rgba(239,68,68,0.15); color: var(--danger); border: 1px solid rgba(239,68,68,0.25); }
+.btn-danger:hover { background: rgba(239,68,68,0.25); }
+.btn-sm { padding: 6px 13px; font-size: 12px; }
+.btn:disabled { opacity: 0.4; pointer-events: none; }
+
+/* ── Toggle ────────────────────────────────────── */
+.toggle {
+  display: flex; align-items: center; gap: 10px;
+  cursor: pointer; user-select: none; font-size: 13px;
+}
+.toggle input { display: none; }
+.toggle-track {
+  width: 36px; height: 20px;
+  background: var(--border);
+  border-radius: 10px;
+  position: relative;
+  transition: background var(--trans);
+}
+.toggle input:checked + .toggle-track { background: var(--accent); }
+.toggle-thumb {
+  width: 14px; height: 14px;
+  background: #fff; border-radius: 50%;
+  position: absolute; top: 3px; left: 3px;
+  transition: transform var(--trans);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.toggle input:checked ~ .toggle-track .toggle-thumb { transform: translateX(16px); }
+
+/* ── Class schedule rows ───────────────────────── */
+.class-rows { display: flex; flex-direction: column; gap: 12px; }
+
+.class-row {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 16px 18px;
+  position: relative;
+}
+.class-row-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.class-row-num {
+  font-size: 12px; font-weight: 700; color: var(--accent);
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.class-row-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 2fr 1fr;
+  gap: 12px;
+}
+
+/* ── Log terminal ──────────────────────────────── */
+.log-container {
+  background: var(--log-bg);
+  border-radius: var(--radius);
+  padding: 16px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 12.5px;
+  line-height: 1.6;
+  height: 360px;
+  overflow-y: auto;
+  color: #a8b2d0;
+  border: 1px solid var(--border);
+  position: relative;
+}
+.log-line { padding: 1px 0; }
+.log-line.err  { color: #ff6b6b; }
+.log-line.sys  { color: var(--accent); font-weight: 600; }
+.log-line.warn { color: var(--warn); }
+.log-line.ok   { color: var(--success); }
+
+/* status dot */
+.status-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  display: inline-block; margin-right: 6px;
+}
+.status-dot.active { background: var(--success); animation: pulse 1.5s infinite; }
+.status-dot.idle   { background: var(--text-dim); }
+.status-dot.error  { background: var(--danger); }
+
+@keyframes pulse {
+  0%,100% { opacity: 1; }
+  50%      { opacity: 0.3; }
+}
+
+/* ── Sessions list ─────────────────────────────── */
+.session-list { display: flex; flex-direction: column; gap: 8px; }
+.session-card {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: border-color var(--trans);
+}
+.session-card:hover { border-color: var(--accent); }
+.session-card.selected { border-color: var(--accent); background: var(--badge-bg); }
+
+/* ── Divider ───────────────────────────────────── */
+.divider { height: 1px; background: var(--border); margin: 18px 0; }
+
+/* ── Notes chunk history (YouTube Notes status view) ── */
+.info-value {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 12px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.chunk-list { display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow-y: auto; }
+.chunk-row {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 13px;
+}
+.chunk-row .chunk-meta { color: var(--text-dim); font-size: 11.5px; margin-top: 2px; }
+.notes-preview {
+  background: var(--log-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  max-height: 280px;
+  overflow-y: auto;
+  color: #a8b2d0;
+}
+
+/* ── Modal ─────────────────────────────────────── */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+}
+.modal-box {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+  width: 480px;
+  max-width: 90vw;
+}
+
+/* ── Theme button ──────────────────────────────── */
+.theme-btn {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 34px; height: 34px;
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 16px;
+  transition: background var(--trans);
+}
+.theme-btn:hover { background: var(--border); }
+
+/* ── Tags input ────────────────────────────────── */
+.tags-container {
+  display: flex; flex-wrap: wrap; gap: 5px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  min-height: 42px;
+  cursor: text;
+  transition: border-color var(--trans);
+}
+.tags-container:focus-within { border-color: var(--accent); }
+.tag {
+  background: var(--badge-bg); color: var(--accent);
+  border-radius: 20px; padding: 2px 10px 2px 8px;
+  font-size: 12px; display: flex; align-items: center; gap: 5px;
+}
+.tag-remove { cursor: pointer; opacity: 0.6; }
+.tag-remove:hover { opacity: 1; }
+.tags-input {
+  border: none; background: transparent; outline: none;
+  color: var(--text); font-size: 13px; flex: 1; min-width: 80px;
+  font-family: inherit;
+}
+
+/* ── Tabs ──────────────────────────────────────── */
+.tabs { display: flex; gap: 2px; margin-bottom: 20px; }
+.tab {
+  padding: 8px 18px; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 500;
+  cursor: pointer; color: var(--text-dim);
+  transition: background var(--trans), color var(--trans);
+  border: 1px solid transparent;
+}
+.tab:hover  { background: var(--bg3); color: var(--text); }
+.tab.active {
+  background: var(--badge-bg); color: var(--accent);
+  border-color: rgba(108,99,255,0.2); font-weight: 600;
+}
+
+/* ── Alert ─────────────────────────────────────── */
+.alert {
+  padding: 10px 14px; border-radius: var(--radius-sm);
+  font-size: 13px; margin-bottom: 14px;
+  display: flex; align-items: flex-start; gap: 9px;
+}
+.alert.info   { background: rgba(108,99,255,0.1); color: var(--accent); border: 1px solid rgba(108,99,255,0.2); }
+.alert.warn   { background: rgba(245,158,11,0.1); color: var(--warn);   border: 1px solid rgba(245,158,11,0.2); }
+.alert.error  { background: rgba(239,68,68,0.1);  color: var(--danger); border: 1px solid rgba(239,68,68,0.2); }
+.alert.ok     { background: rgba(34,197,94,0.1);  color: var(--success); border: 1px solid rgba(34,197,94,0.2); }
+
+/* ── Hidden pages ──────────────────────────────── */
+.page { display: none; }
+.page.active { display: block; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sidebar { width: 60px; min-width: 60px; }
+  .sidebar .logo-title, .sidebar .logo-sub, .nav-item span { display: none; }
+  .form-grid { grid-template-columns: 1fr; }
+  .class-row-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- ═══ SIDEBAR ═══ -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon">🎓</div>
+      <div class="logo-title">Virtual Avatar</div>
+      <div class="logo-sub">AI Student System</div>
+    </div>
+
+    <div class="nav-item active" onclick="navigate('dashboard')">
+      <span class="icon">🏠</span><span>Dashboard</span>
+    </div>
+    <div class="nav-item" onclick="navigate('schedule')">
+      <span class="icon">📅</span><span>Schedule Class</span>
+    </div>
+    <div class="nav-item" onclick="navigate('youtube')">
+      <span class="icon">📝</span><span>Notes</span>
+    </div>
+    <div class="nav-item" onclick="navigate('sessions')">
+      <span class="icon">⚡</span><span>Live Sessions</span>
+    </div>
+    <div class="nav-item" onclick="navigate('settings')">
+      <span class="icon">⚙️</span><span>Settings</span>
+    </div>
+    <div class="sidebar-bottom">
+      <div class="nav-item" style="padding:8px 0" onclick="toggleTheme()">
+        <span class="icon">🌙</span><span id="themeLabel">Dark mode</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══ MAIN ═══ -->
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-title" id="pageTitle">Dashboard</span>
+      <div class="topbar-actions">
+        <div id="keyStatusBar" style="display:flex;gap:8px;align-items:center"></div>
+        <button class="theme-btn" onclick="toggleTheme()" title="Toggle theme">🌙</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ═══ DASHBOARD ═══ -->
+      <div class="page active" id="page-dashboard">
+        <div id="setupAlert" class="alert warn" style="display:none">
+          ⚠️ &nbsp;Some API keys are missing. Go to <b>Settings</b> to configure them before starting a session.
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px">
+          <div class="card" style="text-align:center;padding:24px 16px">
+            <div style="font-size:32px;margin-bottom:8px">🎤</div>
+            <div style="font-size:13px;color:var(--text-dim);margin-bottom:4px">AI Avatar</div>
+            <div style="font-size:15px;font-weight:600" id="dash-avatar-status">Idle</div>
+          </div>
+          <div class="card" style="text-align:center;padding:24px 16px">
+            <div style="font-size:32px;margin-bottom:8px">📝</div>
+            <div style="font-size:13px;color:var(--text-dim);margin-bottom:4px">Note Sessions</div>
+            <div style="font-size:15px;font-weight:600" id="dash-session-count">0</div>
+          </div>
+          <div class="card" style="text-align:center;padding:24px 16px">
+            <div style="font-size:32px;margin-bottom:8px">🧠</div>
+            <div style="font-size:13px;color:var(--text-dim);margin-bottom:4px">AI Engine</div>
+            <div style="font-size:15px;font-weight:600">Gemini Cascade</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><span class="dot"></span>Quick Start</div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="navigate('schedule')">📅 Schedule a Class</button>
+            <button class="btn btn-secondary" onclick="navigate('youtube')">📹 Notes</button>
+            <button class="btn btn-secondary" onclick="navigate('sessions')">⚡ View Live Sessions</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><span class="dot"></span>How It Works</div>
+          <div style="display:flex;flex-direction:column;gap:10px;font-size:13.5px;line-height:1.6;color:var(--text-dim)">
+            <p>1. <b style="color:var(--text)">Set your API keys</b> in Settings (one time only — saved forever).</p>
+            <p>2. <b style="color:var(--text)">Schedule your classes</b> with Google Meet links and time slots.</p>
+            <p>3. <b style="color:var(--text)">Virtual Avatar automatically</b> joins Meet, listens for your name, responds via ElevenLabs voice, and takes exhaustive AI notes every 15 minutes.</p>
+            <p>4. <b style="color:var(--text)">Notes</b> screen-records any video and generates comprehensive lecture notes.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ SCHEDULE CLASS ═══ -->
+      <div class="page" id="page-schedule">
+        <div class="card">
+          <div class="card-title"><span class="dot"></span>Session Setup</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Notes Folder (all classes)</label>
+              <input type="text" id="sch-notes-dir" placeholder="~/Desktop/Class_Notes" />
+            </div>
+            <div class="form-group">
+              <label>Number of Classes Today</label>
+              <select id="sch-num-classes" onchange="renderClassRows()">
+                <option value="1">1 class</option>
+                <option value="2">2 classes</option>
+                <option value="3">3 classes</option>
+                <option value="4">4 classes</option>
+                <option value="5">5 classes</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Notes Chunk Size</label>
+              <select id="sch-chunk-minutes">
+                <option value="10" selected>10 minutes</option>
+                <option value="15">15 minutes</option>
+                <option value="20">20 minutes</option>
+                <option value="30">30 minutes</option>
+                <option value="45">45 minutes</option>
+                <option value="60">1 hour</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div id="classRowsContainer" class="class-rows"></div>
+
+        <div style="display:flex;gap:12px;margin-top:8px">
+          <button class="btn btn-primary" onclick="launchAllClasses()" id="launchBtn">
+            🚀 Launch All Classes
+          </button>
+          <button class="btn btn-secondary" onclick="resetSchedule()">↺ Reset</button>
+        </div>
+      </div>
+
+      <!-- ═══ YOUTUBE NOTES (status / history view) ═══ -->
+      <div class="page" id="page-youtube">
+        <div class="card" id="ytNoSessionCard">
+          <div class="card-title"><span class="dot"></span>Start Notes Recording</div>
+          <div class="alert info">
+            📌 &nbsp;Screen + audio is recorded every N minutes and sent to Gemini for exhaustive notes. Open your video <b>after</b> clicking Start.
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Subject Name</label>
+              <input type="text" id="yt-subject" placeholder="e.g. Compiler Construction" />
+            </div>
+            <div class="form-group">
+              <label>Notes Folder</label>
+              <input type="text" id="yt-notes-dir" placeholder="~/Desktop/YCC" />
+            </div>
+            <div class="form-group">
+              <label>Chunk Length (minutes)</label>
+              <select id="yt-chunk">
+                <option value="10" selected>10 min</option>
+                <option value="15">15 min</option>
+                <option value="20">20 min</option>
+                <option value="30">30 min</option>
+                <option value="45">45 min</option>
+                <option value="60">1 hour</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:14px">
+            <button class="btn btn-primary" onclick="launchYouTube()">▶ Start Recording</button>
+          </div>
+        </div>
+
+        <div class="card" id="ytStatusCard" style="display:none">
+          <div class="card-title" style="justify-content:space-between">
+            <span><span class="dot"></span><span id="yt-status-subject">Subject</span></span>
+            <span id="yt-status-dot"><span class="status-dot active"></span> Recording</span>
+          </div>
+          <div class="form-grid" style="margin-bottom:4px">
+            <div class="form-group">
+              <label>Notes File</label>
+              <div class="info-value" id="yt-notes-path" style="word-break:break-all">—</div>
+            </div>
+            <div class="form-group">
+              <label>Chunk Length</label>
+              <div class="info-value" id="yt-chunk-length">—</div>
+            </div>
+            <div class="form-group">
+              <label>Chunks Saved</label>
+              <div class="info-value" id="yt-chunk-count">0</div>
+            </div>
+          </div>
+          <div style="margin-top:10px">
+            <button class="btn btn-danger" onclick="stopYouTube()" id="stopYtBtn">⏹ Stop Recording</button>
+          </div>
+        </div>
+
+        <div class="card" id="ytChunksCard" style="display:none">
+          <div class="card-title"><span class="dot"></span>Chunk History</div>
+          <div class="chunk-list" id="yt-chunk-list"></div>
+        </div>
+
+        <div class="card" id="ytPreviewCard" style="display:none">
+          <div class="card-title"><span class="dot"></span>Latest Chunk Preview</div>
+          <div class="notes-preview" id="yt-latest-preview">Waiting for the first chunk to finish...</div>
+        </div>
+      </div>
+
+      <!-- ═══ QUICK-LAUNCH MODAL (YouTube/Screen Notes) ═══ -->
+      <!-- Removed: launch form now lives inline on the Notes page itself
+           (page-youtube → ytNoSessionCard) instead of in a popup modal. -->
+
+      <!-- ═══ LIVE SESSIONS ═══ -->
+      <div class="page" id="page-sessions">
+        <div style="display:flex;gap:24px;height:100%">
+          <div style="width:280px;min-width:280px">
+            <div class="card" style="padding:16px">
+              <div class="card-title"><span class="dot"></span>Active Sessions</div>
+              <div class="session-list" id="sessionList">
+                <div style="color:var(--text-dim);font-size:13px">No active sessions</div>
+              </div>
+              <button class="btn btn-secondary btn-sm" style="margin-top:12px;width:100%" onclick="refreshSessions()">↺ Refresh</button>
+            </div>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div class="card" id="sessionDetailCard" style="display:none">
+              <div class="card-title" style="justify-content:space-between">
+                <span><span class="dot"></span><span id="detail-title">Session Log</span></span>
+                <button class="btn btn-danger btn-sm" onclick="stopSession()">⏹ Stop</button>
+              </div>
+              <div id="session-status-badges" style="display:none;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
+              <div class="log-container" id="session-log"></div>
+            </div>
+            <div id="noSessionMsg" class="card" style="color:var(--text-dim);font-size:13px">
+              Select a session on the left to view its live output.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ SETTINGS ═══ -->
+      <div class="page" id="page-settings">
+        <div class="tabs">
+          <div class="tab active" onclick="setTab('keys',this)">🔑 API Keys</div>
+          <div class="tab" onclick="setTab('profile',this)">👤 Profile</div>
+          <div class="tab" onclick="setTab('trigger',this)">🎯 Trigger Words</div>
+          <div class="tab" onclick="setTab('voice',this)">🔊 Voice (ElevenLabs)</div>
+        </div>
+
+        <!-- API Keys -->
+        <div id="tab-keys">
+          <div class="card">
+            <div class="card-title"><span class="dot"></span>Required Keys</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Deepgram API Key (STT)</label>
+                <input type="password" id="cfg-deepgram" placeholder="f38ee6..." autocomplete="off" />
+                <div class="key-status">
+                  <span id="dg-badge" class="badge red">Not set</span>
+                  <span class="hint">Speech-to-text — detects your name</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Gemini API Key(s) <span style="color:var(--text-dim);font-size:11px">(1 required, more optional — used as fallback when one hits its quota)</span></label>
+                <div id="gemini-key-list"></div>
+                <button type="button" class="btn btn-secondary btn-sm" style="margin-top:6px" onclick="addGeminiKeyRow()">+ Add another key</button>
+                <div class="key-status">
+                  <span id="gm-badge" class="badge red">Not set</span>
+                  <span class="hint">Q&A responses + note generation</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="dot"></span>Optional Keys</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>ElevenLabs API Key <span style="color:var(--warn);font-size:11px">(Optional — premium TTS)</span></label>
+                <input type="password" id="cfg-elevenlabs" placeholder="Leave blank to use edge-tts (free)" autocomplete="off" />
+                <div class="key-status">
+                  <span id="el-badge" class="badge yellow">Not set — using edge-tts</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>OBS WebSocket Password</label>
+                <input type="password" id="cfg-obs" placeholder="Leave blank if no password" autocomplete="off" />
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="saveKeys()">💾 Save Keys</button>
+        </div>
+
+        <!-- Profile -->
+        <div id="tab-profile" style="display:none">
+          <div class="card">
+            <div class="card-title"><span class="dot"></span>Student Profile</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Full Name (used for attendance responses)</label>
+                <input type="text" id="cfg-name" placeholder="Wali Ahmad Hotak" />
+              </div>
+              <div class="form-group">
+                <label>Default Notes Folder</label>
+                <input type="text" id="cfg-notes-dir" placeholder="~/Documents/Class_Notes" />
+              </div>
+            </div>
+            <div class="divider"></div>
+            <button class="btn btn-primary" onclick="saveProfile()">💾 Save Profile</button>
+          </div>
+        </div>
+
+        <!-- Trigger Words -->
+        <div id="tab-trigger" style="display:none">
+          <div class="card">
+            <div class="card-title"><span class="dot"></span>Trigger Words</div>
+            <div class="alert info">
+              These are the words/phonetic variants of your name that the AI listens for. When Deepgram transcribes any of these, the avatar responds. Add all phonetic spellings teachers might use.
+            </div>
+            <div class="form-group">
+              <label>Your Name Triggers (press Enter or comma to add)</label>
+              <div class="tags-container" id="triggerTagsContainer" onclick="focusTriggerInput()">
+                <input class="tags-input" id="triggerTagInput" placeholder="Type a word and press Enter..." 
+                       onkeydown="handleTriggerKey(event)" />
+              </div>
+              <span class="hint">Examples: wali, willie, wally, hotak, volley, واللی</span>
+            </div>
+            <div class="divider"></div>
+            <button class="btn btn-primary" onclick="saveTriggers()">💾 Save Triggers</button>
+          </div>
+        </div>
+
+        <!-- Voice -->
+        <div id="tab-voice" style="display:none">
+          <div class="card">
+            <div class="card-title"><span class="dot"></span>ElevenLabs Voice</div>
+            <div class="alert info">
+              If you provide an ElevenLabs API key, your avatar will speak with a realistic human voice instead of the default Microsoft edge-tts voice. The Gemini-generated answer text is sent to ElevenLabs and played through the virtual microphone.
+            </div>
+            <div class="form-grid">
+              <div class="form-group form-full">
+                <label>ElevenLabs Voice ID</label>
+                <input type="text" id="cfg-voice-id" placeholder="21m00Tcm4TlvDq8ikWAM (default: Rachel)" />
+                <span class="hint">Find voice IDs at elevenlabs.io/voice-lab. Leave blank for default.</span>
+              </div>
+            </div>
+            <div class="divider"></div>
+            <button class="btn btn-primary" onclick="saveVoice()">💾 Save Voice Settings</button>
+          </div>
+        </div>
+      </div>
+
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+let currentPage    = "dashboard";
+let currentTab     = "keys";
+let selectedSession = null;
+let ytSessionId    = null;
+let ytAutoSessionIds = [];
+let triggerWords   = [];
+let wsConn         = null;
+let cfg            = {};
+let ytChunks       = [];   // parsed chunk history for the active YT session
+let ytNotesPath    = null;
+let ytChunkLenMin  = null;
+let ytSubjectName  = null;
+
+// ═══════════════════════════════════════════════════════
+//  THEME
+// ═══════════════════════════════════════════════════════
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute("data-theme") === "dark";
+  const next = isDark ? "light" : "dark";
+  html.setAttribute("data-theme", next);
+  const label = document.getElementById("themeLabel");
+  if (label) label.textContent = next === "dark" ? "Dark mode" : "Light mode";
+  localStorage.setItem("va-theme", next);
+}
+
+function initTheme() {
+  const saved = localStorage.getItem("va-theme") || "dark";
+  document.documentElement.setAttribute("data-theme", saved);
+  const label = document.getElementById("themeLabel");
+  if (label) label.textContent = saved === "dark" ? "Dark mode" : "Light mode";
+}
+
+// ═══════════════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════════════
+const pageTitles = {
+  dashboard: "Dashboard",
+  schedule:  "Schedule Classes",
+  youtube:   "Notes",
+  sessions:  "Live Sessions",
+  settings:  "Settings",
+};
+
+function navigate(page) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+
+  const el = document.getElementById("page-" + page);
+  if (el) el.classList.add("active");
+
+  document.querySelectorAll(".nav-item").forEach(n => {
+    if (n.getAttribute("onclick")?.includes(`'${page}'`)) n.classList.add("active");
+  });
+
+  document.getElementById("pageTitle").textContent = pageTitles[page] || page;
+  currentPage = page;
+
+  if (page === "sessions") refreshSessions();
+  if (page === "schedule") { loadScheduleDefaults(); renderClassRows(); }
+  if (page === "settings") loadSettings();
+  if (page === "youtube") renderYtStatus();
+}
+
+// ═══════════════════════════════════════════════════════
+//  TABS (Settings)
+// ═══════════════════════════════════════════════════════
+function setTab(id, el) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  el.classList.add("active");
+  ["keys","profile","trigger","voice"].forEach(t => {
+    const d = document.getElementById("tab-" + t);
+    if (d) d.style.display = t === id ? "" : "none";
+  });
+  currentTab = id;
+}
+
+// ═══════════════════════════════════════════════════════
+//  API HELPERS
+// ═══════════════════════════════════════════════════════
+async function apiFetch(path, method = "GET", body = null) {
+  const opts = { method, headers: { "Content-Type": "application/json" } };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(path, opts);
+  const data = await r.json();
+  if (!r.ok) {
+    const err = new Error(data?.error || `Request failed (${r.status})`);
+    err.status = r.status;
+    throw err;
+  }
+  return data;
+}
+
+// ═══════════════════════════════════════════════════════
+//  CONFIG LOAD
+// ═══════════════════════════════════════════════════════
+async function loadConfig() {
+  cfg = await apiFetch("/api/config");
+
+  // Key badges
+  const dgBadge = document.getElementById("dg-badge");
+  const gmBadge = document.getElementById("gm-badge");
+  const elBadge = document.getElementById("el-badge");
+  if (dgBadge) { dgBadge.textContent = cfg._has_deepgram ? "✓ Set" : "Not set"; dgBadge.className = "badge " + (cfg._has_deepgram ? "green" : "red"); }
+  if (gmBadge) {
+    const n = cfg._gemini_key_count || 0;
+    gmBadge.textContent = n > 0 ? `✓ ${n} key${n > 1 ? 's' : ''} set` : "Not set";
+    gmBadge.className = "badge " + (n > 0 ? "green" : "red");
+  }
+  if (elBadge) {
+    if (cfg._has_elevenlabs) { elBadge.textContent = "✓ Set — premium voice"; elBadge.className = "badge green"; }
+    else { elBadge.textContent = "Not set — using edge-tts (free)"; elBadge.className = "badge yellow"; }
+  }
+  renderGeminiKeyRows(cfg.gemini_keys && cfg.gemini_keys.length ? cfg.gemini_keys : [""]);
+
+  // Topbar
+  const bar = document.getElementById("keyStatusBar");
+  if (bar) {
+    bar.innerHTML = `
+      <span class="badge ${cfg._has_deepgram ? 'green' : 'red'}">DG</span>
+      <span class="badge ${cfg._has_gemini   ? 'green' : 'red'}">GM</span>
+      ${cfg._has_elevenlabs ? '<span class="badge green">EL</span>' : ''}
+    `;
+  }
+
+  // Setup alert
+  const setupAlert = document.getElementById("setupAlert");
+  if (setupAlert) {
+    setupAlert.style.display = (!cfg._has_deepgram || !cfg._has_gemini) ? "" : "none";
+  }
+
+  // Populate notes dir defaults
+  const snd = document.getElementById("sch-notes-dir");
+  if (snd && !snd.value) snd.value = cfg.last_notes_dir || "~/Documents/Class_Notes";
+
+  const ytd = document.getElementById("yt-notes-dir");
+  if (ytd && !ytd.value) ytd.value = cfg.last_notes_dir || "~/Documents/Class_Notes";
+
+  const yts = document.getElementById("yt-subject");
+  if (yts && !yts.value) yts.value = cfg.last_yt_subject || "";
+
+  // Trigger words
+  if (cfg.trigger_words) {
+    triggerWords = Array.isArray(cfg.trigger_words) ? cfg.trigger_words : [];
+    renderTriggerTags();
+  }
+}
+
+async function loadSettings() {
+  cfg = await apiFetch("/api/config");
+  const n = document.getElementById("cfg-name");
+  const nd = document.getElementById("cfg-notes-dir");
+  if (n)  n.value  = cfg.student_name  || "";
+  if (nd) nd.value = cfg.last_notes_dir || "";
+  const vi = document.getElementById("cfg-voice-id");
+  if (vi) vi.value = cfg.elevenlabs_voice_id || "";
+  if (cfg.trigger_words) {
+    triggerWords = Array.isArray(cfg.trigger_words) ? cfg.trigger_words : [];
+    renderTriggerTags();
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  GEMINI MULTI-KEY LIST
+// ═══════════════════════════════════════════════════════
+function renderGeminiKeyRows(values) {
+  const list = document.getElementById("gemini-key-list");
+  if (!list) return;
+  list.innerHTML = values.map((val, i) => `
+    <div class="gemini-key-row" style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+      <input type="password" class="gemini-key-input" data-existing="${val && val.startsWith('••••') ? '1' : ''}"
+             value="${val && val.startsWith('••••') ? '' : escHtml(val || '')}"
+             placeholder="${val && val.startsWith('••••') ? val + ' (saved — leave blank to keep)' : (i === 0 ? 'AIzaSy... (required)' : 'AIzaSy... (optional fallback key)')}"
+             autocomplete="off" style="flex:1" />
+      ${values.length > 1 ? `<button type="button" class="btn btn-secondary btn-sm" onclick="removeGeminiKeyRow(this)">✕</button>` : ''}
+    </div>
+  `).join("");
+}
+
+function addGeminiKeyRow() {
+  const list = document.getElementById("gemini-key-list");
+  if (!list) return;
+  const row = document.createElement("div");
+  row.className = "gemini-key-row";
+  row.style.cssText = "display:flex;gap:8px;align-items:center;margin-bottom:6px";
+  row.innerHTML = `
+    <input type="password" class="gemini-key-input" placeholder="AIzaSy... (optional fallback key)" autocomplete="off" style="flex:1" />
+    <button type="button" class="btn btn-secondary btn-sm" onclick="removeGeminiKeyRow(this)">✕</button>
+  `;
+  list.appendChild(row);
+  // Now that there are 2+ rows, the first row also needs a remove button
+  if (list.children.length === 2) {
+    const firstRow = list.children[0];
+    if (!firstRow.querySelector("button")) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn btn-secondary btn-sm";
+      btn.textContent = "✕";
+      btn.onclick = () => removeGeminiKeyRow(btn);
+      firstRow.appendChild(btn);
+    }
+  }
+}
+
+function removeGeminiKeyRow(btn) {
+  const list = document.getElementById("gemini-key-list");
+  const row = btn.closest(".gemini-key-row");
+  if (row) row.remove();
+  // Down to one row — drop its remove button so the required key can't be deleted away
+  if (list && list.children.length === 1) {
+    const onlyBtn = list.children[0].querySelector("button");
+    if (onlyBtn) onlyBtn.remove();
+  }
+}
+
+
+async function saveKeys() {
+  const dg = document.getElementById("cfg-deepgram")?.value.trim();
+  const el = document.getElementById("cfg-elevenlabs")?.value.trim();
+  const obs = document.getElementById("cfg-obs")?.value; // not trimmed — passwords can have meaningful whitespace
+
+  // Gemini keys: one row per key. A row left blank but marked data-existing
+  // means "keep the already-saved key here" (masked placeholder, not cleared).
+  // A row left blank with no existing key is just an unused optional slot.
+  const geminiInputs = Array.from(document.querySelectorAll(".gemini-key-input"));
+  const geminiKeys = [];
+  for (const input of geminiInputs) {
+    const val = input.value.trim();
+    if (val) {
+      geminiKeys.push(val);
+    } else if (input.dataset.existing === "1") {
+      geminiKeys.push(input.placeholder.split(" (saved")[0]); // masked value, e.g. "••••ab12"
+    }
+    // else: empty optional slot — skip entirely, don't save a blank key
+  }
+
+  if (geminiKeys.length === 0) {
+    showToast("⚠️ At least one Gemini API key is required.");
+    return;
+  }
+
+  // Only include a field if the user actually typed something into it.
+  // Inputs show the existing (masked) value only as a placeholder, so an
+  // empty .value means "leave unchanged" — NOT "clear this field".
+  const data = { gemini_keys: geminiKeys };
+  if (dg)  data.deepgram_key   = dg;
+  if (el)  data.elevenlabs_key = el;
+  if (obs) data.obs_password   = obs;
+
+  await apiFetch("/api/config", "POST", data);
+  // Clear the inputs so the masked placeholder (refreshed from the server)
+  // is what's shown next, not the raw key sitting in a password field.
+  if (dg)  document.getElementById("cfg-deepgram").value  = "";
+  if (el)  document.getElementById("cfg-elevenlabs").value = "";
+  if (obs) document.getElementById("cfg-obs").value       = "";
+  await loadConfig();
+  showToast(`✅ Saved: ${dg ? 'deepgram, ' : ''}${geminiKeys.length} gemini key${geminiKeys.length > 1 ? 's' : ''}${el ? ', elevenlabs' : ''}`);
+}
+
+async function saveProfile() {
+  const name = document.getElementById("cfg-name")?.value.trim();
+  const dir  = document.getElementById("cfg-notes-dir")?.value.trim();
+  const data = {};
+  if (name) data.student_name   = name;
+  if (dir)  data.last_notes_dir = dir;
+  if (Object.keys(data).length === 0) {
+    showToast("Nothing to save — both fields are empty.");
+    return;
+  }
+  await apiFetch("/api/config", "POST", data);
+  showToast("✅ Profile saved!");
+}
+
+async function saveTriggers() {
+  await apiFetch("/api/config", "POST", { trigger_words: triggerWords });
+  showToast("✅ Trigger words saved!");
+}
+
+async function saveVoice() {
+  const vid = document.getElementById("cfg-voice-id")?.value.trim();
+  if (!vid) {
+    showToast("Voice ID is empty — nothing saved.");
+    return;
+  }
+  await apiFetch("/api/config", "POST", { elevenlabs_voice_id: vid });
+  showToast("✅ Voice settings saved!");
+}
+
+// ═══════════════════════════════════════════════════════
+//  TRIGGER WORD TAGS
+// ═══════════════════════════════════════════════════════
+function focusTriggerInput() {
+  document.getElementById("triggerTagInput")?.focus();
+}
+
+function handleTriggerKey(e) {
+  if (e.key === "Enter" || e.key === ",") {
+    e.preventDefault();
+    const val = e.target.value.trim().replace(/,/g, "");
+    if (val && !triggerWords.includes(val)) {
+      triggerWords.push(val);
+      renderTriggerTags();
+    }
+    e.target.value = "";
+  } else if (e.key === "Backspace" && !e.target.value && triggerWords.length) {
+    triggerWords.pop();
+    renderTriggerTags();
+  }
+}
+
+function removeTag(word) {
+  triggerWords = triggerWords.filter(w => w !== word);
+  renderTriggerTags();
+}
+
+function renderTriggerTags() {
+  const container = document.getElementById("triggerTagsContainer");
+  if (!container) return;
+  const input = document.getElementById("triggerTagInput");
+  container.innerHTML = "";
+  triggerWords.forEach(w => {
+    const tag = document.createElement("span");
+    tag.className = "tag";
+    tag.innerHTML = `${w} <span class="tag-remove" onclick="removeTag('${w}')">×</span>`;
+    container.appendChild(tag);
+  });
+  container.appendChild(input || Object.assign(document.createElement("input"), {
+    className: "tags-input",
+    id: "triggerTagInput",
+    placeholder: "Type a word and press Enter...",
+    onkeydown: handleTriggerKey,
+  }));
+}
+
+// ═══════════════════════════════════════════════════════
+//  CLASS SCHEDULE
+// ═══════════════════════════════════════════════════════
+function loadScheduleDefaults() {
+  const snd = document.getElementById("sch-notes-dir");
+  if (snd) snd.value = cfg.last_notes_dir || "~/Documents/Class_Notes";
+}
+
+function renderClassRows() {
+  const num = parseInt(document.getElementById("sch-num-classes")?.value || "1");
+  const container = document.getElementById("classRowsContainer");
+  if (!container) return;
+  container.innerHTML = "";
+
+  for (let i = 1; i <= num; i++) {
+    const row = document.createElement("div");
+    row.className = "card";
+    row.innerHTML = `
+      <div class="class-row-header">
+        <span class="class-row-num">Class ${i} of ${num}</span>
+        <span class="badge purple">Pending</span>
+      </div>
+      <div class="class-row-grid">
+        <div class="form-group">
+          <label>Subject</label>
+          <input type="text" id="cls${i}-subject" value="${cfg.last_subject || ''}" placeholder="Compiler Construction" />
+        </div>
+        <div class="form-group">
+          <label>Date (DD/MM/YYYY)</label>
+          <input type="text" id="cls${i}-date" value="${todayStr()}" />
+        </div>
+        <div class="form-group">
+          <label>Google Meet Link</label>
+          <input type="text" id="cls${i}-meet" value="${cfg['last_meet_' + i] || ''}" placeholder="https://meet.google.com/xxx-yyyy-zzz" />
+        </div>
+        <div class="form-group">
+          <label>Start Time</label>
+          <input type="text" id="cls${i}-start" value="${cfg['last_start_' + i] || '8:30am'}" placeholder="8:30am or 14:00" />
+        </div>
+        <div class="form-group">
+          <label>End Time</label>
+          <input type="text" id="cls${i}-end" value="${cfg['last_end_' + i] || '10:00am'}" placeholder="10:00am or 15:30" />
+        </div>
+      </div>
+    `;
+    container.appendChild(row);
+  }
+}
+
+function todayStr() {
+  const now = new Date();
+  return `${String(now.getDate()).padStart(2,"0")}/${String(now.getMonth()+1).padStart(2,"0")}/${now.getFullYear()}`;
+}
+
+async function launchAllClasses() {
+  const num = parseInt(document.getElementById("sch-num-classes")?.value || "1");
+  const notesDir = document.getElementById("sch-notes-dir")?.value.trim() || "~/Documents/Class_Notes";
+
+  const classes = [];
+  for (let i = 1; i <= num; i++) {
+    const subject  = document.getElementById(`cls${i}-subject`)?.value.trim() || "Class";
+    const date     = document.getElementById(`cls${i}-date`)?.value.trim()    || todayStr();
+    const meet     = document.getElementById(`cls${i}-meet`)?.value.trim()    || "";
+    const startStr = document.getElementById(`cls${i}-start`)?.value.trim()   || "8:30am";
+    const endStr   = document.getElementById(`cls${i}-end`)?.value.trim()     || "10:00am";
+
+    const startDt = parseDateTime(date, startStr);
+    const endDt   = parseDateTime(date, endStr);
+    if (!startDt || !endDt) { showToast(`❌ Invalid time for class ${i}`, "error"); return; }
+
+    const fn = `${subject.replace(/\s+/g,"_")}_${date.replace(/\//g,"-")}_${startStr.replace(/:/g,"")}.md`;
+    const notesPath = `${notesDir.replace(/^~/, "")}/${fn}`;
+
+    classes.push({ class_num: i, subject, meet_link: meet, notes_path: notesPath,
+      start_time: startDt.toISOString(), end_time: endDt.toISOString() });
+  }
+
+  // Save config defaults
+  const patch = { last_notes_dir: notesDir, last_subject: classes[0]?.subject };
+  classes.forEach((c, idx) => {
+    const i = idx + 1;
+    patch[`last_start_${i}`] = document.getElementById(`cls${i}-start`)?.value.trim();
+    patch[`last_end_${i}`]   = document.getElementById(`cls${i}-end`)?.value.trim();
+    patch[`last_meet_${i}`]  = c.meet_link;
+  });
+  await apiFetch("/api/config", "POST", patch);
+
+  // Launch each class sequentially via server, and auto-start YouTube
+  // screen notes alongside it using the same subject + notes folder
+  // already entered above — no separate manual step needed.
+  showToast("🚀 Launching sessions…");
+  for (const cls of classes) {
+    const r = await apiFetch("/api/launch", "POST", cls);
+    if (r.sessionId) {
+      showToast(`✅ Class ${cls.class_num} started — ${r.sessionId}`);
+    }
+
+    const ytR = await apiFetch("/api/launch-yt", "POST", {
+      subject: cls.subject,
+      notes_dir: notesDir,
+      chunk_minutes: parseInt(document.getElementById("sch-chunk-minutes")?.value || "10"),
+    });
+    if (ytR.sessionId) {
+      ytAutoSessionIds.push(ytR.sessionId);
+      ytSessionId = ytR.sessionId; // so the YouTube Notes page Stop button can reach the latest one
+      showToast(`📝 Auto notes started for ${cls.subject} — ${ytR.sessionId}`);
+    }
+  }
+  navigate("sessions");
+}
+
+function parseDateTime(dateStr, timeStr) {
+  // dateStr: "21/06/2026", timeStr: "8:30am" or "14:00"
+  try {
+    const [d, m, y] = dateStr.split("/");
+    let hours, mins;
+    const t = timeStr.trim().toLowerCase();
+    if (t.includes("am") || t.includes("pm")) {
+      const [hm, ap] = [t.replace(/[ap]m/,""), t.includes("pm") ? "pm" : "am"];
+      const [h, mn] = hm.split(":").map(Number);
+      hours = ap === "pm" ? (h === 12 ? 12 : h + 12) : (h === 12 ? 0 : h);
+      mins  = mn || 0;
+    } else {
+      const [h, mn] = t.split(":").map(Number);
+      hours = h; mins = mn || 0;
+    }
+    return new Date(parseInt(y), parseInt(m) - 1, parseInt(d), hours, mins);
+  } catch { return null; }
+}
+
+function resetSchedule() {
+  document.getElementById("sch-num-classes").value = "1";
+  renderClassRows();
+}
+
+// ═══════════════════════════════════════════════════════
+//  YOUTUBE NOTES
+// ═══════════════════════════════════════════════════════
+function prefillYtForm() {
+  // Pre-fill the inline launch form from last-used config — only when
+  // empty, so it never overwrites something the user already typed.
+  const subjEl = document.getElementById("yt-subject");
+  const dirEl  = document.getElementById("yt-notes-dir");
+  if (subjEl && !subjEl.value) subjEl.value = cfg.last_yt_subject || "";
+  if (dirEl  && !dirEl.value)  dirEl.value  = cfg.last_notes_dir  || "";
+}
+
+async function launchYouTube() {
+  const subject   = document.getElementById("yt-subject")?.value.trim() || "Lecture";
+  const notesDir  = document.getElementById("yt-notes-dir")?.value.trim() || "~/Documents/Class_Notes";
+  const chunkMins = document.getElementById("yt-chunk")?.value || "10";
+
+  const r = await apiFetch("/api/launch-yt", "POST", { subject, notes_dir: notesDir, chunk_minutes: parseInt(chunkMins) });
+  if (r.sessionId) {
+    ytSessionId    = r.sessionId;
+    ytChunks       = [];
+    ytNotesPath    = null;
+    ytChunkLenMin  = chunkMins;
+    ytSubjectName  = subject;
+
+    renderYtStatus();
+    showToast("▶ Recording started!");
+    navigate('youtube');
+  } else {
+    showToast("❌ Failed to start — check server logs.");
+  }
+}
+
+async function stopYouTube() {
+  const ids = ytAutoSessionIds.length ? ytAutoSessionIds : (ytSessionId ? [ytSessionId] : []);
+  for (const id of ids) {
+    try {
+      await apiFetch(`/api/sessions/${id}`, "DELETE");
+    } catch (e) {
+      // Already stopped/pruned (e.g. double-click, or it auto-completed) —
+      // not a real failure, just nothing left to stop.
+      if (e.status !== 404) console.warn("Stop failed:", e);
+    }
+  }
+  ytAutoSessionIds = [];
+  ytSessionId = null;
+  renderYtStatus();
+  showToast("⏹ Stopped.");
+}
+
+// Parse a raw log line from youtube_notes.py into structured chunk events.
+// Recognized formats (see youtube_notes.py):
+//   "📁 Notes file: <path>"
+//   "[AI Scribe] ☁️  Uploading Chunk N (...) at TIME..."
+//   "✅ [AI Scribe] Chunk N notes saved!"
+//   "❌ [AI Scribe] ... chunk N ..." (failure variants)
+function parseYtLogLine(line) {
+  const pathMatch = line.match(/📁 Notes file:\s*(.+)/);
+  if (pathMatch) {
+    ytNotesPath = pathMatch[1].trim();
+    return true;
+  }
+
+  const uploadMatch = line.match(/Uploading Chunk (\d+)/i);
+  if (uploadMatch) {
+    const n = parseInt(uploadMatch[1]);
+    let row = ytChunks.find(c => c.num === n);
+    if (!row) { row = { num: n, status: "uploading", text: null }; ytChunks.push(row); }
+    else row.status = "uploading";
+    return true;
+  }
+
+  const savedMatch = line.match(/✅.*Chunk (\d+) notes saved/i);
+  if (savedMatch) {
+    const n = parseInt(savedMatch[1]);
+    let row = ytChunks.find(c => c.num === n);
+    if (!row) { row = { num: n, status: "saved", text: null }; ytChunks.push(row); }
+    else row.status = "saved";
+    row.savedAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    fetchLatestYtPreview();
+    return true;
+  }
+
+  const failMatch = line.match(/❌.*[Cc]hunk (\d+)/);
+  if (failMatch) {
+    const n = parseInt(failMatch[1]);
+    let row = ytChunks.find(c => c.num === n);
+    if (!row) { row = { num: n, status: "failed", text: null }; ytChunks.push(row); }
+    else row.status = "failed";
+    return true;
+  }
+
+  return false;
+}
+
+async function fetchLatestYtPreview() {
+  if (!ytSessionId) return;
+  try {
+    const data = await apiFetch(`/api/sessions/${ytSessionId}/notes-preview`);
+    if (data.path) ytNotesPath = data.path;
+    const previewEl = document.getElementById("yt-latest-preview");
+    if (previewEl) {
+      previewEl.textContent = data.latestChunkText || "Chunk saved, but preview text isn't available.";
+    }
+    if (currentPage === "youtube") renderYtStatus();
+  } catch {}
+}
+
+function renderYtStatus() {
+  const noSession = document.getElementById("ytNoSessionCard");
+  const statusCard = document.getElementById("ytStatusCard");
+  const chunksCard = document.getElementById("ytChunksCard");
+  const previewCard = document.getElementById("ytPreviewCard");
+
+  if (!ytSessionId) {
+    noSession.style.display = "";
+    statusCard.style.display = "none";
+    chunksCard.style.display = "none";
+    previewCard.style.display = "none";
+    prefillYtForm();
+    return;
+  }
+
+  noSession.style.display = "none";
+  statusCard.style.display = "";
+  chunksCard.style.display = ytChunks.length ? "" : "none";
+  previewCard.style.display = "";
+
+  document.getElementById("yt-status-subject").textContent = ytSubjectName || "Recording";
+  document.getElementById("yt-notes-path").textContent = ytNotesPath || "Waiting for first chunk...";
+  document.getElementById("yt-chunk-length").textContent = ytChunkLenMin ? `${ytChunkLenMin} min` : "—";
+  document.getElementById("yt-chunk-count").textContent = ytChunks.filter(c => c.status === "saved").length;
+
+  const list = document.getElementById("yt-chunk-list");
+  list.innerHTML = [...ytChunks].reverse().map(c => {
+    const icon = c.status === "saved" ? "✅" : c.status === "failed" ? "❌" : "⏳";
+    const label = c.status === "saved" ? `Saved${c.savedAt ? ' at ' + c.savedAt : ''}`
+                : c.status === "failed" ? "Failed"
+                : "Uploading / analyzing...";
+    return `
+      <div class="chunk-row">
+        <div>
+          <div>${icon} Part ${c.num}</div>
+          <div class="chunk-meta">${label}</div>
+        </div>
+      </div>`;
+  }).join("");
+  // Note: the preview text itself is populated separately by
+  // fetchLatestYtPreview() (it lives in the .md file, not in log lines),
+  // so we don't overwrite #yt-latest-preview here.
+}
+
+// ═══════════════════════════════════════════════════════
+//  SESSIONS
+// ═══════════════════════════════════════════════════════
+async function refreshSessions() {
+  const sessions = await apiFetch("/api/sessions");
+  const list = document.getElementById("sessionList");
+  const count = document.getElementById("dash-session-count");
+  if (count) count.textContent = sessions.length;
+
+  if (!list) return;
+  if (!sessions.length) {
+    list.innerHTML = '<div style="color:var(--text-dim);font-size:13px">No active sessions</div>';
+    return;
+  }
+
+  list.innerHTML = sessions.map(s => `
+    <div class="session-card ${selectedSession === s.id ? 'selected' : ''}"
+         onclick="selectSession('${s.id}','${s.subject}')">
+      <div>
+        <div style="font-size:13px;font-weight:600">${s.subject}</div>
+        <div style="font-size:11px;color:var(--text-dim)">${s.type} · ${s.logCount} lines</div>
+      </div>
+      <span class="status-dot ${s.alive ? 'active' : 'idle'}"></span>
+    </div>
+  `).join("");
+}
+
+function renderSessionStatus(status) {
+  const el = document.getElementById("session-status-badges");
+  if (!el) return;
+  if (!status) {
+    el.style.display = "none";
+    el.innerHTML = "";
+    return;
+  }
+  const badge = (ok, onLabel, offLabel) => {
+    const ok2 = ok === true;
+    const color = ok2 ? "var(--success, #22c55e)" : "var(--danger, #ef4444)";
+    const label = ok2 ? onLabel : offLabel;
+    const icon = ok2 ? "●" : "⚠";
+    return `<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:${color}22;color:${color};font-size:12px;font-weight:600">${icon} ${label}</span>`;
+  };
+  const parts = [];
+  if ("audio_ok" in status) parts.push(badge(status.audio_ok, "Mic active", "Mic failed"));
+  if ("vcam_active" in status) parts.push(badge(status.vcam_active, "Camera in Meet", "Camera NOT in Meet"));
+  if ("obs_recording" in status) parts.push(badge(status.obs_recording, "Recording", "Not recording"));
+  el.innerHTML = parts.join("");
+  el.style.display = parts.length ? "flex" : "none";
+}
+
+async function selectSession(id, subject) {
+  selectedSession = id;
+  document.getElementById("detail-title").textContent = subject + " — Live Log";
+  document.getElementById("sessionDetailCard").style.display = "";
+  document.getElementById("noSessionMsg").style.display = "none";
+
+  const data = await apiFetch(`/api/sessions/${id}/logs`);
+  const logEl = document.getElementById("session-log");
+  if (logEl) {
+    logEl.innerHTML = data.logs.map(line => `<div class="log-line">${escHtml(line)}</div>`).join("");
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+  renderSessionStatus(data.status);
+  refreshSessions();
+}
+
+async function stopSession() {
+  if (!selectedSession) return;
+  try {
+    await apiFetch(`/api/sessions/${selectedSession}`, "DELETE");
+    showToast("⏹ Session stopped.");
+  } catch (e) {
+    if (e.status === 404) {
+      showToast("Session already stopped.");
+    } else {
+      showToast("❌ Couldn't stop session: " + e.message);
+      console.error(e);
+      return; // leave selection/UI as-is so the user can retry
+    }
+  }
+  selectedSession = null;
+  renderSessionStatus(null);
+  refreshSessions();
+}
+
+// ═══════════════════════════════════════════════════════
+//  WEBSOCKET — live log streaming
+// ═══════════════════════════════════════════════════════
+function initWebSocket() {
+  const proto = location.protocol === "https:" ? "wss:" : "ws:";
+  const wsUrl = `${proto}//${location.host}`;
+  wsConn = new WebSocket(wsUrl);
+
+  wsConn.onmessage = (ev) => {
+    try {
+      const msg = JSON.parse(ev.data);
+
+      // Route to correct log pane
+      if (msg.sessionId === selectedSession) {
+        if (msg.type === "status") {
+          try { renderSessionStatus(JSON.parse(msg.line)); } catch {}
+        } else {
+          appendLog("session-log", msg.line, msg.type);
+        }
+      }
+      if (msg.sessionId === ytSessionId) {
+        const changed = parseYtLogLine(msg.line);
+        if (changed && currentPage === "youtube") renderYtStatus();
+        if (/Process exited|✅ Done/i.test(msg.line)) {
+          // Session ended on its own (e.g. natural completion) — reflect that
+          ytSessionId = null;
+          if (currentPage === "youtube") renderYtStatus();
+        }
+      }
+
+      // Update session list badge if on that page
+      if (currentPage === "sessions") refreshSessions();
+    } catch {}
+  };
+
+  wsConn.onclose = () => {
+    setTimeout(initWebSocket, 3000); // auto-reconnect
+  };
+}
+
+function appendLog(containerId, line, type) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const div = document.createElement("div");
+  div.className = "log-line" + (type === "err" ? " err" : type === "system" ? " sys" : "");
+  div.textContent = line;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+
+  // Trim to max 2000 lines
+  while (el.children.length > 2000) el.removeChild(el.firstChild);
+}
+
+// ═══════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════
+function showToast(msg, type = "ok") {
+  const t = document.createElement("div");
+  t.style.cssText = `
+    position:fixed;bottom:24px;right:24px;z-index:9999;
+    background:var(--bg2);border:1px solid var(--border);
+    color:var(--text);padding:12px 18px;border-radius:var(--radius);
+    font-size:13px;box-shadow:0 4px 20px var(--shadow);
+    animation:fadeIn 0.2s ease;max-width:320px;
+  `;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+// ═══════════════════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════════════════
+function escHtml(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+// CSS animation
+const styleEl = document.createElement("style");
+styleEl.textContent = `@keyframes fadeIn { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:none } }`;
+document.head.appendChild(styleEl);
+
+// ═══════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════
+initTheme();
+loadConfig();
+initWebSocket();
+renderClassRows();
+
+// Refresh sessions every 5s if on that page
+setInterval(() => {
+  if (currentPage === "sessions") refreshSessions();
+}, 5000);
+</script>
+</body>
+</html>
